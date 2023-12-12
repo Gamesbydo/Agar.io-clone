@@ -1,1 +1,1 @@
-# Creating a browser game similiar to Arar.io
+# Creating a browser game similiar to Agar.io

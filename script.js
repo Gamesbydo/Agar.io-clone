@@ -65,10 +65,19 @@ const onMouseMove = (event) => {
     targetY = event.clientY || event.pageY;
 };
 
+const windowResize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    createGrid();
+    createPlayer();
+};
+
 const onPageLoad = () => {
     createGrid();
     createPlayer();
     window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('resize', windowResize);
     updateGame();
 };
 
