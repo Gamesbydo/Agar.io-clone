@@ -7,6 +7,10 @@
         <title>HTML canvas</title>
     </head>
     <body>
+        <button id="startButton" onclick="onStartClick()">Start!</button>
+        <label id="colorPickerLabel" for="colorPicker">Choose player color:</label>
+        <input type="color" id="colorPicker" name="colorPicker" />
+        <div id="scoreCounter">Score: 0</div>
         <canvas id="gameCanvas"></canvas>
         <script src="script.js"></script>
     </body>
