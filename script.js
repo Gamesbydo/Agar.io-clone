@@ -8,21 +8,21 @@ let playerX = canvas.width / 2;
 let playerY = canvas.height / 2;
 const playerRadius = 40;
 const playerMovSpeed = 5;
+const gridSpacing = 50;
 
 let targetX = playerX;
 let targetY = playerY;
 
 const createGrid = () => {
     ctx.globalAlpha = 0.3;
-    let spacing = canvas.width / 20;
-    for (let i = spacing; i < canvas.width; i += spacing) {
+    for (let i = gridSpacing; i < canvas.width; i += gridSpacing) {
         ctx.beginPath();
         ctx.moveTo(i, 0);
         ctx.lineTo(i, canvas.height);
         ctx.stroke();
         ctx.closePath();
     }
-    for (let i = spacing; i < canvas.width; i += spacing) {
+    for (let i = gridSpacing; i < canvas.width; i += gridSpacing) {
         ctx.beginPath();
         ctx.moveTo(0, i);
         ctx.lineTo(canvas.width, i);
