@@ -1,23 +1,24 @@
-const canvas = document.getElementById('gameCanvas');
+/*TODO:
+    - Finish the window resizing
+    - Work on having multiple blobs at the same time
+    - Load only parts of the map the player can see
+    - Add bots into the game
+    - Add multiplayer??
+*/
+const canvas = document.getElementById('gameMap');
 const ctx = canvas.getContext('2d');
-const colorPicker = document.getElementById('colorPicker');
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let playerX = canvas.width / 2;
-let playerY = canvas.height / 2;
-let playerColor = '#00ff00';
-let playerRadius = 20;
-const startPlayerRadius = playerRadius;
-const maxFood = 1000;
+const foodStorage = [];
+const maxFood = 5000;
 const foodRadius = 5;
+const playerBlobs = []; // [posX, posY, sizeOfBlob]
+const startingSize = 20;
 const playerMovSpeed = 3;
 const gridSpacing = 50;
-const foodStorage = [];
-
-let targetX = playerX;
-let targetY = playerY;
+let debugOpen = false;
+let mouseX = 0;
+let mouseY = 0;
+let playerColor = '#000000';
+canvas.width = canvas.height = 10_000;
 
 const createGrid = () => {
     ctx.globalAlpha = 0.3;
@@ -38,66 +39,33 @@ const createGrid = () => {
     ctx.globalAlpha = 1;
 };
 
-const createPlayer = () => {
-    ctx.beginPath();
-    ctx.arc(playerX, playerY, playerRadius, 0, 2 * Math.PI);
-    ctx.fillStyle = playerColor;
-    ctx.fill();
-    ctx.closePath();
+const hideMenu = () => {
+    document.getElementById('menuContainer').style.display = 'none';
+    document.getElementById('gameMap').style.display = 'inline';
 };
 
-const updateGame = () => {
-    const dx = targetX - playerX;
-    const dy = targetY - playerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    if (distance > playerMovSpeed) {
-        playerX += (dx / distance) * playerMovSpeed;
-        playerY += (dy / distance) * playerMovSpeed;
+const visibleDebug = () => {
+    if (debugOpen) {
+        document.getElementById('debugText').style.display = 'none';
+        debugOpen = false;
     } else {
-        playerX = targetX;
-        playerY = targetY;
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    createGrid();
-    createPlayer();
-    foodDraw();
-    checkIfFoodTouched();
-    requestAnimationFrame(updateGame);
-};
-
-const onMouseMove = (event) => {
-    targetX = event.clientX || event.pageX;
-    targetY = event.clientY || event.pageY;
-};
-
-const windowResize = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    createGrid();
-};
-
-const checkIfFoodTouched = () => {
-    let index = 0;
-    let distanceFromFoodNeeded = playerRadius + foodRadius;
-    for (let [posX, posY] of foodStorage) {
-        if (
-            Math.abs(posX - playerX) <= distanceFromFoodNeeded &&
-            Math.abs(posY - playerY) <= distanceFromFoodNeeded
-        ) {
-            foodStorage.splice(index, 1);
-            playerRadius += 1;
-            document.getElementById('scoreCounter').innerText = `Score: ${
-                playerRadius - startPlayerRadius
-            }`;
-        }
-        index++;
+        document.getElementById('debugText').style.display = 'block';
+        debugOpen = true;
     }
 };
 
-const foodDraw = () => {
+const updateDebug = (posX, posY) => {
+    let debugtext = `MouseX: ${mouseX},MouseY: ${mouseY},PlayerPosX: ${posX},PlayerPosY: ${posY}`;
+    document.getElementById('debugText').innerText = debugtext;
+};
+
+const spawnPlayer = () => {
+    let posX = ~~(Math.random() * canvas.width);
+    let posY = ~~(Math.random() * canvas.height);
+    playerBlobs.push([posX, posY, startingSize]);
+};
+
+const renderFood = () => {
     foodGen();
     for (let [posX, posY, color] of foodStorage) {
         ctx.beginPath();
@@ -109,7 +77,7 @@ const foodDraw = () => {
 };
 
 const foodGen = () => {
-    if (Math.random() > 0.7 && foodStorage.length < maxFood) {
+    if (foodStorage.length < maxFood) {
         let foodX = Math.random() * canvas.width;
         let foodY = Math.random() * canvas.height;
         let color = [
@@ -121,21 +89,99 @@ const foodGen = () => {
     }
 };
 
-const hideMenu = () => {
-    document.getElementById('startButton').style.display = 'none';
-    colorPicker.style.display = 'none';
-    document.getElementById('colorPickerLabel').style.display = 'none';
+const renderPlayerBlobs = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const averageX = playerBlobs.reduce((acc, cur) => acc + cur[0], 0);
+    const averageY = playerBlobs.reduce((acc, cur) => acc + cur[1], 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.translate(
+        window.innerWidth / 2 - averageX / playerBlobs.length,
+        window.innerHeight / 2 - averageY / playerBlobs.length
+    );
+    let count = 0;
+    for (let [posX, posY, sizeOfBlob] of playerBlobs) {
+        ctx.beginPath();
+        ctx.arc(posX, posY, sizeOfBlob, 0, 2 * Math.PI);
+        ctx.fillStyle = playerColor;
+        ctx.fill();
+        ctx.closePath();
+        const dx = mouseX - window.innerWidth / 2;
+        const dy = mouseY - window.innerHeight / 2;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > playerMovSpeed) {
+            // the if statements are border collision checks
+            if (
+                playerBlobs[count][0] +
+                    (dx / distance) * playerMovSpeed +
+                    playerBlobs[count][2] >
+                    0 &&
+                playerBlobs[count][0] +
+                    (dx / distance) * playerMovSpeed +
+                    playerBlobs[count][2] <
+                    canvas.width
+            ) {
+                playerBlobs[count][0] += (dx / distance) * playerMovSpeed;
+            }
+            if (
+                playerBlobs[count][1] +
+                    (dy / distance) * playerMovSpeed +
+                    playerBlobs[count][2] >
+                    0 &&
+                playerBlobs[count][1] +
+                    (dy / distance) * playerMovSpeed +
+                    playerBlobs[count][2] <
+                    canvas.width
+            ) {
+                playerBlobs[count][1] += (dy / distance) * playerMovSpeed;
+            }
+        }
+        playerBlobs[count][2] = checkIfFoodTouched(
+            playerBlobs[count][0],
+            playerBlobs[count][1],
+            playerBlobs[count][2]
+        );
+        count++;
+    }
+    if (debugOpen) {
+        updateDebug(~~averageX, ~~averageY);
+    }
 };
 
-const onStartClick = () => {
+const checkIfFoodTouched = (blobX, blobY, blobSize) => {
+    //! NEEDS SIGNIFICANT IMPROVEMENT - https://www.youtube.com/watch?v=eED4bSkYCB8
+    let index = 0;
+    let distanceFromFoodNeeded = blobSize + foodRadius;
+    for (let [posX, posY] of foodStorage) {
+        if (
+            Math.abs(posX - blobX) <= distanceFromFoodNeeded &&
+            Math.abs(posY - blobY) <= distanceFromFoodNeeded
+        ) {
+            foodStorage.splice(index, 1);
+            blobSize += 1;
+        }
+        index++;
+    }
+    return blobSize;
+};
+
+const updateMousePosition = (event) => {
+    mouseX = event.clientX || event.pageX;
+    mouseY = event.clientY || event.pageY;
+};
+
+const updateGame = () => {
+    renderPlayerBlobs();
+    createGrid();
+    renderFood();
+    requestAnimationFrame(updateGame);
+};
+
+const startGame = () => {
     hideMenu();
-    createPlayer();
-    window.addEventListener('mousemove', onMouseMove);
+    spawnPlayer();
     updateGame();
+    createGrid();
+    window.addEventListener('mousemove', updateMousePosition);
+    //? window.addEventListener('resize', windowResize); add resizing later
 };
-
-createGrid();
-window.addEventListener('resize', windowResize);
-colorPicker.addEventListener('input', (event) => {
-    playerColor = event.target.value;
-});
